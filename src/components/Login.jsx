@@ -2,7 +2,7 @@ import { useState } from 'react';
 import logoImage from '../assets/eagleslogo.png';
 import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css'; // Import the CSS for react-toastify
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function Login() {
     const navigate = useNavigate();
@@ -12,51 +12,76 @@ export default function Login() {
     const [orgMobile, setOrgMobile] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
- 
+
     const handleCreateAccount = async () => {
+        if (password !== confirmPassword) {
+            toast.error('Passwords do not match', { position: 'top-right' });
+            return;
+        }
+    
         const payload = {
             org_name: orgName,
             org_email: orgEmail,
             org_mobile_number: orgMobile,
             full_name: fullName,
             password: password,
-            confirm_password: confirmPassword,
         };
-   
+    
         try {
-            const response = await fetch('http://127.0.0.1:8000/Organization/organizations/', {
+            const response = await fetch('http://127.0.0.1:8000/Organization/create-organization/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(payload),
             });
-   
-            if (!response.ok) {
-                const errorData = await response.json(); // Read the error response body
-                toast.error(errorData.detail || 'An error occurred', {
+    
+            const responseData = await response.json();
+            console.log('Full Response:', responseData); // Log full response
+    
+            if (response.ok) {
+                console.log("Success notification triggered");
+    
+                // Ensure the response has 'response' object
+                const { access_token, org_name, org_id, employee_name, emp_id, role, org_logo,org_email } = responseData.response;
+    
+                // Store values in localStorage
+                localStorage.setItem('token', access_token);
+                localStorage.setItem('org_name', org_name);
+                localStorage.setItem('org_id', org_id);
+                localStorage.setItem('full_name', employee_name);
+                localStorage.setItem('emp_id', emp_id);
+                localStorage.setItem('role', role);
+                localStorage.setItem('org_logo', org_logo);
+                localStorage.setItem('email', org_email);
+    
+                toast.success('Account created successfully!', {
                     position: 'top-right',
+                    autoClose: 5000,
                 });
-                return; // Exit early after handling the error
+    
+                // Delay navigation to ensure the toast appears
+                setTimeout(() => {
+                    navigate('/hrdashboard');
+                }, 1000); // 1000 ms = 1 second delay
+            } else {
+                console.error('Error Response:', responseData);
+                const errorMessage = responseData.msg || 'An error occurred';
+                toast.error(errorMessage, { position: 'top-right' });
             }
-   
-            const data = await response.json();
-         
-            console.log('Organization Name Set:', data.org_name); // Add this line // Handle success response...
-            toast.success('Account created successfully!', {
-                position: 'top-right',
-                autoClose: 10000,
-            });
-            navigate('/dashboard');
-   
         } catch (error) {
+            toast.error('Something went wrong. Please try again.', { position: 'top-right' });
             console.error('Error during signup:', error);
-            toast.error('Something went wrong. Please try again.', {
-                position: 'top-right',
-            });
         }
     };
-   
+    
+    
+    
+    
+    
+    
+    
+
     return (
         <div className="container mx-auto">
             <div className="flex flex-col items-center justify-center bg-white-100" id="signup">
@@ -84,7 +109,6 @@ export default function Login() {
                         />
                         <h6 className="mt-3 text-lg font-semibold text-left ml-[1rem]">Start with your free account today.</h6>
                         <p className="text-left text-gray-600 ml-[1rem]">No upfront fees. No credit card required.</p>
- 
                         <div className="flex flex-col md:flex-row mt-5">
                             <div className="md:w-1/2 p-2">
                                 <input
@@ -103,9 +127,8 @@ export default function Login() {
                                     onChange={(e) => setOrgEmail(e.target.value)}
                                     className="p-2 w-[90%] border-b-2 border-black focus:outline-none focus:border-b-black mb-4"
                                     autoComplete="off"
-                                   
                                 />
-                                 <input
+                                <input
                                     type="password"
                                     id="password"
                                     placeholder="Password"
@@ -145,7 +168,6 @@ export default function Login() {
                                 />
                             </div>
                         </div>
- 
                         <div className="mt-3 text-left">
                             <p className="text-xs">
                                 By clicking 'Create Account for Free', I accept the AlongX
@@ -175,7 +197,6 @@ export default function Login() {
                     </div>
                 </div>
             </div>
-            {/* Toast container to show messages */}
             <ToastContainer />
         </div>
     );

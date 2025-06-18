@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { FaSearch, FaCheckCircle, FaTimesCircle, FaHourglassHalf } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2'; // Import SweetAlert2
 
 export default function Sessions() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sessions, setSessions] = useState([]);
+  const [submissionData, setSubmissionData] = useState({});
   const [loading, setLoading] = useState(true);
-  const sessionsPerPage = 5;
+  const sessionsPerPage = 10;
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetching sessions data
+    // Fetch sessions data
     fetch('http://127.0.0.1:8000/Session/sessions/')
       .then((response) => response.json())
       .then((data) => {
@@ -23,6 +25,26 @@ export default function Sessions() {
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    // Fetch submission data for each session
+    const fetchSubmissionStatus = (sessionId) => {
+      const managerId = localStorage.getItem('manager_id');
+      if (!managerId) return;
+
+      fetch(`http://localhost:8000/SessionEntry/submission-status/${managerId}/${sessionId}`)
+        .then((response) => response.json())
+        .then((data) => {
+          setSubmissionData((prevData) => ({
+            ...prevData,
+            [sessionId]: data,
+          }));
+        })
+        .catch((error) => console.error('Error fetching submission status:', error));
+    };
+
+    sessions.forEach((session) => fetchSubmissionStatus(session.session_id));
+  }, [sessions]);
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
@@ -42,7 +64,18 @@ export default function Sessions() {
   };
 
   const handleSessionClick = (sessionId) => {
-    navigate(`/sessionentry/${sessionId}`);
+    const submissionStatus = submissionData[sessionId];
+    if (submissionStatus && submissionStatus.total_employees === submissionStatus.submitted_count) {
+      // Show SweetAlert if all performance parameters are submitted
+      Swal.fire({
+        icon: 'info',
+        title: 'All Parameters Submitted',
+        text: 'You have already submitted all employee performance parameters in this session. Click another session.',
+      });
+    } else {
+      localStorage.setItem('session_id', sessionId);
+      navigate(`/sessionentry/${sessionId}`);
+    }
   };
 
   const handlePreviousPage = () => {
@@ -85,14 +118,15 @@ export default function Sessions() {
                 <th className="py-3 px-4 text-left text-gray-600">Session Name</th>
                 <th className="py-3 px-4 text-left text-gray-600">Start Date</th>
                 <th className="py-3 px-4 text-left text-gray-600">End Date</th>
+                <th className="py-3 px-4 text-left text-gray-600">Own Status</th>
                 <th className="py-3 px-4 text-left text-gray-600">Status</th>
               </tr>
             </thead>
             <tbody>
               {currentSessions.map((session, index) => (
                 <tr key={session.session_id} className="border-b">
-                  <td className="py-3 px-4">{indexOfFirstSession + index + 1}</td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 text-left">{indexOfFirstSession + index + 1}</td>
+                  <td className="py-3 px-4 text-left">
                     <span
                       onClick={() => handleSessionClick(session.session_id)}
                       className="cursor-pointer text-gray-800 hover:text-green-600 transition-colors duration-200"
@@ -100,9 +134,19 @@ export default function Sessions() {
                       {session.session_name}
                     </span>
                   </td>
-                  <td className="py-3 px-4">{session.start_date}</td>
-                  <td className="py-3 px-4">{session.end_date}</td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 text-left">{session.start_date}</td>
+                  <td className="py-3 px-4 text-left">{session.end_date}</td>
+                  <td className="py-3 px-4 text-left">
+                    {submissionData[session.session_id] ? (
+                      <span className="text-gray-800">
+                        {submissionData[session.session_id].total_employees} out of{' '}
+                        {submissionData[session.session_id].submitted_count} submitted
+                      </span>
+                    ) : (
+                      'Loading...'
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-left">
                     <span className="inline-flex items-center space-x-2">
                       {session.status.toLowerCase() === 'completed' && (
                         <FaCheckCircle className="text-green-600" />

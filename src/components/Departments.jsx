@@ -157,8 +157,6 @@ export default function Departments() {
         New Department
       </button>
     </div>
- 
-      {/* Check if there are departments; if not, show NoDataImage */}
       {departments.length === 0 ? (
         <div className="flex justify-center items-center">
           <img src={NoDataImage} alt="No Data Available" className="w-80" />
@@ -203,8 +201,6 @@ export default function Departments() {
       )}
  
       <ToastContainer />
- 
-      {/* Modal for Adding or Editing Department */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-96">

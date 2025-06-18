@@ -1,39 +1,77 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import logoImage from '../assets/eagleslogo.png';
-// import { BiHide } from 'react-icons/bi';
-import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Cookies from 'js-cookie';
 
 export default function SignIn() {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
- 
+    const [rememberMe, setRememberMe] = useState(false); 
+
+    useEffect(() => {
+        const token = Cookies.get('access_token');
+        if (token) {
+            navigate('/dashboard');
+        }
+    }, [navigate]);
+
     const handleSignIn = async () => {
-        const payload = {
-            email: email,  // Use 'email' field as per the API's LoginRequest model
-            password: password,
-        };
-   
+        const payload = new URLSearchParams();
+        payload.append('grant_type', 'password');
+        payload.append('username', email);
+        payload.append('password', password);
+    
         try {
-            const response = await fetch('http://127.0.0.1:8000/Organization/organizations/login', {  // Updated endpoint for login
+            const response = await fetch('http://localhost:8000/Login/token/', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: JSON.stringify(payload),
+                body: payload.toString(),
             });
-   
+    
             if (response.ok) {
                 const data = await response.json();
                 console.log('Login successful:', data);
+    
+                // Store user details in local storage
+                localStorage.setItem('token', data.access_token);
+                localStorage.setItem('employee_name', data.employee_name);
+                localStorage.setItem('role', data.role);
+                localStorage.setItem('emp_id', data.emp_id);
+                localStorage.setItem('manager_id', data.emp_id);
+                if (data.org_id) {
+                    localStorage.setItem('org_id', data.org_id);
+                    console.log('Stored org_id:', data.org_id);
+                }
+    
+                // Handle "Remember Me" functionality
+                if (rememberMe) {
+                    localStorage.setItem('email', email);
+                    localStorage.setItem('password', password);
+                    Cookies.set('email', email, { expires: 365 });
+                    Cookies.set('password', password, { expires: 365 });
+                } else {
+                    localStorage.removeItem('email');
+                    localStorage.removeItem('password');
+                    Cookies.remove('email');
+                    Cookies.remove('password');
+                }
+    
                 toast.success('Login successful!', { position: 'top-right', autoClose: 3000 });
-   
-                // Navigate to the dashboard page after successful login
+    
+                // Navigate based on role
                 setTimeout(() => {
-                    navigate('/dashboard');
+                    if (data.role === 'HR Admin') {
+                        navigate('/hrdashboard');
+                    } else if (data.role === 'Manager') {
+                        navigate('/dashboard');
+                    } else {
+                        toast.error('Unauthorized role. Please contact support.', { position: 'top-right' });
+                    }
                 }, 3000);
             } else {
                 const errorData = await response.json();
@@ -45,6 +83,10 @@ export default function SignIn() {
             toast.error('Something went wrong. Please try again.', { position: 'top-right' });
         }
     };
+    
+    
+    
+
     return (
         <div className="container mx-auto font-sans">
             <div className="flex items-center justify-center bg-white-100" id="signIn">
@@ -70,7 +112,7 @@ export default function SignIn() {
                             </h6>
                         </div>
                     </div>
- 
+
                     <div className="flex items-center justify-between bg-white p-4" id="signIn">
                         <div className="w-1/2 mt-5 mainCol">
                             <img
@@ -80,7 +122,7 @@ export default function SignIn() {
                             />
                             <h6 className="mt-3 text-lg font-semibold ml-[6px]">Sign into your Eagles account</h6>
                             <p className="text-muted text-gray-600 ml-[6px]">Unlock Your World: Access Awaits!</p>
- 
+
                             <div className="mt-2">
                                 <div className="mb-4">
                                     <input
@@ -108,11 +150,11 @@ export default function SignIn() {
                                 </div>
                             </div>
                             <div className="mt-1 flex items-center justify-between">
-                            <div>
-                                <input type="checkbox" id="rememberMe" />
-                                <label htmlFor="rememberMe" className="ml-2">Remember me</label>
-                            </div>
-                                <a href="/forgot-password" className="text-blue-600">Forgot Password?</a>
+                                <div>
+                                    <input type="checkbox" id="rememberMe" />
+                                    <label htmlFor="rememberMe" className="ml-2">Remember me</label>
+                                </div>
+                                <Link to="/forgot-password" className="text-blue-600">Forgot Password?</Link>
                             </div>
                             <div className="mt-3">
                                 <button className="bg-[#795548c4] text-white rounded-full px-4 py-2" id="btnLogin" onClick={handleSignIn}>
@@ -128,7 +170,7 @@ export default function SignIn() {
                             />
                         </div>
                     </div>
- 
+
                     <div className="mt-3 flex items-center justify-between bg-white p-4">
                         <div className="w-full">
                             <p className="text-xs">
@@ -138,7 +180,7 @@ export default function SignIn() {
                             </p>
                         </div>
                     </div>
- 
+
                     <div className="mt-4 flex items-center justify-between">
                         <div className="w-1/2">
                             <p className="text-xs">A product of AlongX Software</p>

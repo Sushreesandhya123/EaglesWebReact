@@ -1,21 +1,12 @@
-import {
-	HiOutlineViewGrid,
-	HiOutlineQuestionMarkCircle,
-	HiOutlineCog,
-	HiOutlineDocumentReport
-	
-} from 'react-icons/hi'
-import {
-	// MdApartment,
-	// MdWorkOutline,
-	// MdSpeed,
-	MdEventNote
-
- } from 'react-icons/md';
  import { 
-	FaUserTie,
+	FaHome,
+	FaChalkboardTeacher,
+	FaUsers,
 	FaAward,
-	FaMoneyBillWave 
+	FaFileAlt,
+	FaWallet,
+	FaCog,
+	FaQuestionCircle,
 } from 'react-icons/fa';
 
 export const DASHBOARD_SIDEBAR_LINKS = [
@@ -23,43 +14,32 @@ export const DASHBOARD_SIDEBAR_LINKS = [
 		key: 'dashboard',
 		label: 'Dashboard',
 		path: 'dashboard',
-		icon: <HiOutlineViewGrid />
+		icon: <FaHome />
+	},
+	{
+		key: 'hrdashboard',
+		label: 'HR Dashboard',
+		path: 'hrdashboard',
+		icon: <FaHome />
 	},
 	{
 		key: 'mysession',
 		label: 'HR Session',
 		path: '/mysession',
-		icon: <MdEventNote />
+		icon: <FaChalkboardTeacher />
 	},
-	// {
-	// 	key: 'departments',
-	// 	label: 'Departments',
-	// 	path: '/Departments',
-	// 	icon: <MdApartment />
-	// },
-	// {
-	// 	key: 'projects',
-	// 	label: 'Projects',
-	// 	path: '/Projects',
-	// 	icon: <MdWorkOutline />
-	// },
-	// {
-	// 	key: 'performance parameters',
-	// 	label: 'Performance Parameters',
-	// 	// path: '/Velocity',
-	// 	icon: <MdSpeed />
-	// },
+
 	{
 		key: 'employee',
 		label: 'Employees',
 		path: '/Employee',
-		icon: <FaUserTie />
+		icon: <FaUsers/>
 	},
     {
 		key: 'sessions',
 		label: 'Sessions',
 		path: '/Sessions',
-		icon: <MdEventNote />
+		icon: <FaChalkboardTeacher />
 	},
     {
 		key: 'rewards',
@@ -71,13 +51,13 @@ export const DASHBOARD_SIDEBAR_LINKS = [
 		key: 'withdraw requests',
 		label: 'Withdraw Requests',
 		path: '/WithdrawaRequest',
-		icon: <FaMoneyBillWave />
+		icon: <FaWallet />
 	},
     {
 		key: 'reports',
 		label: 'Reports',
 		path: '/Report',
-		icon: <HiOutlineDocumentReport />
+		icon: <FaFileAlt />
 	},
 ]
 
@@ -86,12 +66,14 @@ export const DASHBOARD_SIDEBAR_BOTTOM_LINKS = [
 		key: 'settings',
 		label: 'Settings',
 		path: '/Setting',
-		icon: <HiOutlineCog />
+		icon: <FaCog />
 	},
 	{
 		key: 'support',
 		label: 'Help & Support',
 		// path: '/support',
-		icon: <HiOutlineQuestionMarkCircle />
+		icon: <FaQuestionCircle />
 	}
 ]
+
+

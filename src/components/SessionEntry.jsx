@@ -1,185 +1,199 @@
 import React, { useState, useEffect } from 'react';
 import { FaCheckCircle } from 'react-icons/fa';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import Swal from 'sweetalert2';
+import NoDataImage from '../assets/norecord.svg';
 
 export default function SessionEntry() {
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [quillValue, setQuillValue] = useState('');
-  const [inputValue, setInputValue] = useState('');
-  const [parameters, setParameters] = useState([]); // State for performance parameters
+  const [parameters, setParameters] = useState([]);
   const [expandedEmployee, setExpandedEmployee] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [submittedEmployees, setSubmittedEmployees] = useState([]);
-  const [employees, setEmployees] = useState([]); // Store fetched employees here
+  const [employees, setEmployees] = useState([]);
+  const [comments, setComments] = useState({});
   const maxLength = 50;
 
-  // Fetch employee details based on the manager's full name and role
   useEffect(() => {
+    // Fetch employees
     const fetchEmployees = async () => {
       try {
-        const managerFullName = localStorage.getItem('fullName');
-        const managerRole = localStorage.getItem('userRole');
-        
-        console.log('Manager Full Name:', managerFullName); // Check if this is null or undefined
-        console.log('Manager Role:', managerRole); //
-     // Replace with actual value if dynamic
-
-        // Ensure managerFullName and managerRole are defined before making the request
-        if (!managerFullName || !managerRole) {
-          console.error('Manager full name or role is undefined.');
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('Token is undefined.');
           return;
         }
-
-        const response = await fetch(`http://127.0.0.1:8000/SessionEntry/employees/manager?manager_full_name=${managerFullName}&manager_role=${managerRole}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch employee details');
-        }
-
+        const response = await fetch('http://127.0.0.1:8000/Employee/manager-employees/', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) throw new Error('Failed to fetch employee details');
         const data = await response.json();
-        setEmployees(data); // Store the fetched employees
+        setEmployees(data);
       } catch (error) {
         console.error('Error fetching employees:', error);
       }
     };
-
     fetchEmployees();
   }, []);
 
-  // Fetch performance parameters
   useEffect(() => {
+    // Fetch parameters
     const fetchParameters = async () => {
       try {
         const response = await fetch('http://127.0.0.1:8000/PerformanceParameter/parameters');
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
+        if (!response.ok) throw new Error('Failed to fetch parameters');
         const data = await response.json();
-        setParameters(data); // Set the fetched parameters in the state
+        setParameters(data);
       } catch (error) {
         console.error('Error fetching parameters:', error);
       }
     };
-
     fetchParameters();
   }, []);
-
-  const handleInputClick = () => {
-    setIsPopupOpen(true);
-  };
-
-  const stripHtml = (html) => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    return tempDiv.textContent || tempDiv.innerText || '';
-  };
-
-  const handleOkClick = () => {
-    setIsPopupOpen(false);
-    setInputValue(stripHtml(quillValue));
-  };
 
   const toggleEmployeeDetails = (emp) => {
     setExpandedEmployee((prev) => (prev === emp ? null : emp));
   };
 
   const selectEmployee = (emp) => {
-    setSelectedEmployee(emp);
+    setSelectedEmployee((prev) => (prev === emp ? null : emp)); // Toggle selection
+    localStorage.setItem('selected_employee_id', emp?.emp_id || '');
+  };
+
+  const handleCommentChange = (parameterId, value) => {
+    setComments((prev) => ({
+      ...prev,
+      [parameterId]: value,
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const sessionId = parseInt(localStorage.getItem('session_id'), 10);
+    const empId = parseInt(localStorage.getItem('selected_employee_id'), 10);
 
-    // Prepare data for the POST request
+    if (!sessionId || !empId) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Incomplete data',
+        text: 'Please select an employee and ensure the session ID is valid.',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    // Check if performance data has already been submitted for this employee
+    if (submittedEmployees.includes(selectedEmployee)) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Performance parameters for this employee have already been submitted',
+        text: 'Please select a different employee.',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
+    const ratings = parameters.map((parameter) => ({
+      parameter_id: parameter.parameter_id,
+      rating: parseInt(e.target[`rating-${parameter.parameter_id}`]?.value, 10) || 0,
+      comments: comments[parameter.parameter_id] || "",
+    })).filter(param => param.rating > 0 || param.comments !== "");
+
+    if (ratings.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Incomplete data',
+        text: 'Please provide ratings or comments before submitting.',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
     const performanceData = {
-        employeeId: selectedEmployee?.employee_id,
-        parameters: parameters.map((parameter) => ({
-            parameter_id: parameter.parameter_id, // Ensure parameter_id is set
-            rating: parseInt(e.target[`rating-${parameter.parameter_id}`]?.value, 10) || 0, // Default to 0 if undefined
-            comments: e.target[`comments-${parameter.parameter_id}`]?.value || "", // Get comments from input field
-        })).filter(param => param.rating > 0 || param.comments !== ""), // Filter out parameters without ratings or comments
+      session_id: sessionId,
+      emp_id: empId,
+      ratings
     };
 
-    // Log the data being sent for debugging
-    console.log('Submitting performance data:', performanceData);
+    console.log("Submitting performance data:", performanceData);
 
     try {
-        const response = await fetch('http://127.0.0.1:8000/SessionEntry/session-entry', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(performanceData),
-        });
+      const response = await fetch('http://localhost:8000/SessionEntry/sessionentry/', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(performanceData),
+      });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Response error:', errorText);
-            throw new Error('Failed to submit performance data');
+      console.log("Response status:", response.status);
+
+      if (!response.ok) {
+        // Check for a specific error message from the server
+        const errorData = await response.json();
+        if (errorData.detail === 'Performance parameters for this employee have already been submitted.') {
+          Swal.fire({
+            icon: 'info',
+            title: 'Performance Already Submitted',
+            text: 'Performance parameters for this employee have already been submitted for this session.',
+            confirmButtonText: 'OK'
+          });
+          return;  // Stop further processing if already submitted
+        } else {
+          throw new Error('Failed to submit performance data');
         }
+      }
 
-        const result = await response.json();
-        setSubmittedEmployees((prev) => [...prev, selectedEmployee]);
-        alert('Form submitted successfully!');
-
-        // Reset form fields
-        setInputValue('');
-        setQuillValue('');
-        setSelectedEmployee(null);
+      Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Form submitted successfully!',
+        confirmButtonText: 'OK'
+      });
+      setSubmittedEmployees((prev) => [...prev, selectedEmployee]);
+      setComments({});
+      setSelectedEmployee(null);
+      localStorage.removeItem('selected_employee_id');
     } catch (error) {
-        console.error('Error submitting performance data:', error);
+      console.error('Error submitting performance data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: 'There was an error submitting the form. Please try again.',
+        confirmButtonText: 'OK'
+      });
     }
 };
 
-  
-  
-  
+
+  // Clear submitted employees when the component unmounts or when navigating away
+  useEffect(() => {
+    return () => {
+      setSubmittedEmployees([]);
+    };
+  }, []);
 
   return (
     <div className="flex flex-wrap h-full min-h-screen">
       <div className="w-full md:w-3/12 h-full">
         <div className="card bg-[#f3f6fc] h-full flex flex-col overflow-hidden shadow-lg">
           <div className="card-body p-2 flex-grow">
-            {/* Session Entry Form Title */}
             <div className="mb-4 text-center mt-3">
               <h2 className="text-lg font-bold text-gray-700 mb-2">Session Entry Form</h2>
               <hr className="border-t-2 border-gray-300 mb-4" />
             </div>
 
-            {/* Session Name */}
-            <div className="mb-4 text-center">
-              <h2 className="text-md font-bold text-gray-700 mb-2">Session Name</h2>
-              <hr className="border-t-2 border-gray-300 mb-4" />
-            </div>
-
-            {/* Employee Divs */}
             <div className="space-y-2">
               {employees.length > 0 ? employees.map((emp) => (
-                <div 
-                  key={emp.employee_id} 
-                  className="p-4 bg-[#c3b7a4] flex flex-col rounded-lg shadow-md"
-                >
-                  {/* Employee Name */}
+                <div key={emp.employee_id} className="p-4 bg-[#c3b7a4] flex flex-col rounded-lg shadow-md">
                   <div className="flex justify-between items-center">
-                    <span 
-                      className="text-white font-semibold cursor-pointer" 
-                      onClick={() => selectEmployee(emp)}
-                    >
-                      {emp.employee_name}
-                    </span>
-
+                    <span className="text-white font-semibold cursor-pointer" onClick={() => selectEmployee(emp)}>{emp.employee_name}</span>
                     <div className="flex items-center">
-                      {submittedEmployees.includes(emp) && (
-                        <FaCheckCircle className="text-green-600 mr-2" />
-                      )}
-                      
-                      <span 
-                        className="text-gray-800 cursor-pointer" 
-                        onClick={() => toggleEmployeeDetails(emp)}
-                      >
-                        {expandedEmployee === emp ? '▲' : '▼'}
-                      </span>
+                      {submittedEmployees.includes(emp) && <FaCheckCircle className="text-green-600 mr-2" />}
+                      <span className="text-gray-800 cursor-pointer" onClick={() => toggleEmployeeDetails(emp)}>{expandedEmployee === emp ? '▲' : '▼'}</span>
                     </div>
                   </div>
 
@@ -191,7 +205,12 @@ export default function SessionEntry() {
                     </div>
                   )}
                 </div>
-              )) : <p>No employees found</p>}
+              )) : (
+                <div className="flex flex-col items-center">
+                  <img src={NoDataImage} alt="No Data" className="w-32 h-32 mb-4" />
+                  <p>No employees found</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -200,10 +219,12 @@ export default function SessionEntry() {
       <div className="w-full md:w-9/12 h-full">
         <div className="card bg-white h-full flex flex-col overflow-hidden">
           <div className="card-header flex justify-between items-center p-4 border-b border-gray-300">
-            <h2 className="text-xl font-semibold" id="reportTitle">Entry Performance Parameter for Employee</h2>
+          <h2 className="text-xl font-semibold" id="reportTitle">
+              {selectedEmployee ? `Entry Performance Parameter for ${selectedEmployee.employee_name}` : 'Entry Performance Parameter for Employee'}
+            </h2>
           </div>
           <div className="card-body flex-grow flex flex-col">
-            {selectedEmployee !== null ? (
+            {selectedEmployee ? (
               <form onSubmit={handleSubmit} className="w-full flex-grow flex flex-col">
                 <div className="flex-grow overflow-auto">
                   <table className="bg-white border border-gray-200 w-full">
@@ -219,72 +240,35 @@ export default function SessionEntry() {
                         <tr key={parameter.parameter_id} className="border-b border-gray-200 hover:bg-gray-100">
                           <td className="p-4">{parameter.name}</td>
                           <td className="p-4">
-                            <select
-                              name={`rating-${parameter.parameter_id}`} // Give each select a unique name
-                              className="border border-gray-300 w-20 px-2 py-1 rounded"
-                              defaultValue="0"
-                            >
+                            <select name={`rating-${parameter.parameter_id}`} className="border border-gray-300 w-20 px-2 py-1 rounded" defaultValue="0">
                               {Array.from({ length: (parameter.max_rating - parameter.min_rating + 1) }, (_, index) => parameter.min_rating + index).map((value) => (
-                                <option key={value} value={value}>
-                                  {value}
-                                </option>
+                                <option key={value} value={value}>{value}</option>
                               ))}
                             </select>
                           </td>
                           <td className="p-4">
-                            <div
-                              className="border border-gray-300 p-2 w-full cursor-pointer"
-                              onClick={handleInputClick}
-                            >
-                              {inputValue.length > maxLength
-                                ? `${inputValue.substring(0, maxLength)}...`
-                                : inputValue || 'Click to add a comment'}
-                            </div>
-
-                            {isPopupOpen && (
-                              <div className="fixed inset-0 flex items-center justify-center z-50">
-                                <div className="bg-white p-4 rounded shadow-lg">
-                                  <h2 className="text-lg font-bold mb-2">Add Comment</h2>
-                                  <ReactQuill value={quillValue} onChange={setQuillValue} />
-                                  <div className="flex justify-end mt-4">
-                                    <button
-                                      type="button"
-                                      className="bg-blue-500 text-white px-4 py-2 rounded mr-2"
-                                      onClick={handleOkClick}
-                                    >
-                                      OK
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="bg-gray-300 text-gray-700 px-4 py-2 rounded"
-                                      onClick={() => setIsPopupOpen(false)}
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                            <textarea
+                              name={`comments-${parameter.parameter_id}`}
+                              className="border border-gray-300 p-2 w-full rounded"
+                              placeholder="Enter Comments"
+                              maxLength={maxLength}
+                              value={comments[parameter.parameter_id] || ""}
+                              onChange={(e) => handleCommentChange(parameter.parameter_id, e.target.value)}
+                            />
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-
-                {/* Submit Button */}
                 <div className="flex justify-end p-4 border-t border-gray-300">
-                  <button
-                    type="submit"
-                    className="bg-green-500 text-white px-4 py-2 rounded"
-                  >
-                    Submit
-                  </button>
+                  <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Submit</button>
                 </div>
               </form>
             ) : (
-              <div className="flex items-center justify-center h-full">
-                <h3 className="text-lg text-gray-700">Please select an employee to rate.</h3>
+              <div className="flex flex-col items-center justify-center flex-grow">
+                <img src={NoDataImage} alt="No Data" className="w-32 h-32 mb-4" />
+                <p className="text-gray-600">Please select an employee to enter performance parameters.</p>
               </div>
             )}
           </div>

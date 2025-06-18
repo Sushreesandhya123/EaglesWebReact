@@ -15,7 +15,9 @@ import WithdrawaRequest from './components/WithdrawaRequest';
 import Setting from './components/Setting';
 import MySession from './components/mysession';
 import Report from './components/Report';
-import Rewards from './components/Rewards' 
+import Rewards from './components/Rewards';
+import Profile from './components/Profile'
+import Hrdashboard from './components/Hrdashboard';
 
 function App() {
     const [ setIsAuthenticated ] = useState(false); // manage auth state
@@ -39,6 +41,7 @@ function App() {
                 <Route element={<Layout />}>
                     {/* Temporarily hardcode dashboard route without auth check */}
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/hrdashboard" element={<Hrdashboard />} />
                     <Route path="employee" element={<Employee />} />
                     <Route path="departments" element={<Departments />} />
                     <Route path="performanceparameter" element={<PerformanceParameter />} />
@@ -51,6 +54,7 @@ function App() {
                     <Route path="withdrawarequest" element={<WithdrawaRequest />} />
                     <Route path="report" element={<Report />} />
                     <Route path="setting" element={<Setting />} />
+                    <Route path="/profile" element={<Profile />} />
                 </Route>
 
                 {/* Redirect Root to SignIn */}

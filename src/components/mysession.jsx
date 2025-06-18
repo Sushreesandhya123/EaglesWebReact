@@ -17,7 +17,7 @@ export default function MySession() {
     const [loading, setLoading] = useState(true);
 
     const [currentPage, setCurrentPage] = useState(1);
-    const sessionsPerPage = 5;
+    const sessionsPerPage = 10;
 
     // Fetch sessions from the backend API
     useEffect(() => {
@@ -184,16 +184,6 @@ export default function MySession() {
         <p className="text-gray-600">"Each session is not just a meeting, but an opportunity to align vision, set goals, and inspire growth."</p>
     </div>
           <div className="flex space-x-4 items-center">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search sessions..."
-                value={searchQuery}
-                onChange={handleSearch}
-                className="w-64 py-2 px-4 pl-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-200"
-              />
-              <FaSearch className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-500" />
-            </div>
             <button
               onClick={() => {
                 setIsEditMode(false);
@@ -208,6 +198,33 @@ export default function MySession() {
           </div>
         </div>
         <div className="bg-white rounded-lg p-6">
+        <div className="flex justify-between items-center mb-2">
+            <label className="mr-2">
+          Show 
+          <select 
+            name="allUsers_length" 
+            aria-controls="allUsers" 
+            className="ml-1 form-select form-select-xl border border-gray-300 "
+          >
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select> 
+          entries
+        </label>
+                <div className="relative">
+                <input
+                type="text"
+                placeholder="Search sessions..."
+                value={searchQuery}
+                onChange={handleSearch}
+                className="w-64 py-1 px-4 pl-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-200"
+              />
+                        <FaSearch className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-500" />
+                    </div>
+                
+            </div>
           <div className="overflow-x-auto bg-white rounded-lg">
           {sessions.length === 0 ? (
     <div className="flex flex-col items-center justify-center">
